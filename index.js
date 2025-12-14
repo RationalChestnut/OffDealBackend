@@ -1,7 +1,7 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 const fs = require("file-system");
-
+const cors = require("cors");
 const app = express();
 const router = express.Router();
 const PORT = process.env.PORT || 5001;
@@ -11,7 +11,7 @@ const path = require("path");
 const ExcelJS = require("exceljs");
 
 require("dotenv").config({ path: "./.env" });
-
+app.use(cors());
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -32,6 +32,7 @@ app.use((req, res, next) => {
 const findLocalBusinesses = async (req, res) => {
   const { query } = req.body;
   console.log("Run", query);
+  return;
 
   try {
     const response = await axios.post(
