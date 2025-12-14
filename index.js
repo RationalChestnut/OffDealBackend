@@ -31,8 +31,6 @@ app.use((req, res, next) => {
 
 const findLocalBusinesses = async (req, res) => {
   const { query } = req.body;
-  console.log("Run", query);
-  return;
 
   try {
     const response = await axios.post(
