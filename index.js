@@ -7,44 +7,47 @@ const router = express.Router();
 const PORT = process.env.PORT || 5001;
 const axios = require("axios");
 const path = require("path");
-
 const ExcelJS = require("exceljs");
 
 require("dotenv").config({ path: "./.env" });
-app.use(cors());
+
+app.use(
+  cors({
+    origin: true,
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS", "PUT"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+    ],
+    exposedHeaders: ["x-next-page-token", "content-disposition"],
+  })
+);
+
+app.options(/.*/, cors());
+
 app.use(express.json());
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PATCH, DELETE, OPTIONS, PUT"
-  );
-  next();
-});
-
-// Populate spreadsheet with local business name, url, category, email, phone number
-
 const findLocalBusinesses = async (req, res) => {
-  const { query } = req.body;
+  const { query, pageToken } = req.body;
 
   try {
     const response = await axios.post(
       "https://places.googleapis.com/v1/places:searchText",
-      { textQuery: query },
+      { textQuery: query, pageToken },
       {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": process.env.PLACES_API_KEY,
           "X-Goog-FieldMask":
-            "places.displayName,places.formattedAddress,places.businessStatus,places.websiteUri,places.nationalPhoneNumber",
+            "places.displayName,places.formattedAddress,places.businessStatus,places.websiteUri,places.nationalPhoneNumber,nextPageToken",
         },
       }
     );
+
+    const nextPageToken = response.data.nextPageToken || "";
 
     const places = response.data.places || [];
 
@@ -78,6 +81,9 @@ const findLocalBusinesses = async (req, res) => {
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
+
+    res.setHeader("X-Next-Page-Token", nextPageToken);
+
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Length", buffer.length);
 
@@ -91,25 +97,7 @@ const findLocalBusinesses = async (req, res) => {
   }
 };
 
-// const findBusinessEmail = async (websiteURL) => {
-//   try {
-//     const browser = await puppeteer.launch({ headless: false });
-//     const page = await browser.newPage();
-
-//     await page.goto(websiteURL);
-
-//     const html = await page.content();
-//     console.log(websiteURL);
-//     // console.log(html);
-
-//     await browser.close();
-//   } catch (error) {
-//     console.log(error);
-//   }
-// };
-
 router.post("/find", findLocalBusinesses);
-
 app.use("/", router);
 
 app.listen(PORT, () => {
